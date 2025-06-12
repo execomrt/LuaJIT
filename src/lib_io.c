@@ -85,7 +85,7 @@ static IOFileUD *io_file_open(lua_State *L, const char *mode)
 {
   const char *fname = strdata(lj_lib_checkstr(L, 1));
   IOFileUD *iof = io_file_new(L);
-  iof->fp = fopen(fname, mode);
+  iof->fp = l_fopen(fname, mode);
   if (iof->fp == NULL)
     luaL_argerror(L, 1, lj_strfmt_pushf(L, "%s: %s", fname, strerror(errno)));
   return iof;
@@ -95,7 +95,7 @@ static int io_file_close(lua_State *L, IOFileUD *iof)
 {
   int ok;
   if ((iof->type & IOFILE_TYPE_MASK) == IOFILE_TYPE_FILE) {
-    ok = (fclose(iof->fp) == 0);
+    ok = (l_fclose(iof->fp) == 0);
   } else if ((iof->type & IOFILE_TYPE_MASK) == IOFILE_TYPE_PIPE) {
     int stat = -1;
 #if LJ_TARGET_POSIX
@@ -147,7 +147,7 @@ static int io_file_readline(lua_State *L, FILE *fp, MSize chop)
   char *buf;
   for (;;) {
     buf = lj_buf_tmp(L, m);
-    if (fgets(buf+n, m-n, fp) == NULL) break;
+    if (l_fgets(buf+n, m-n, fp) == NULL) break;
     n += (MSize)strlen(buf+n);
     ok |= n;
     if (n && buf[n-1] == '\n') { n -= chop; break; }
@@ -163,7 +163,7 @@ static void io_file_readall(lua_State *L, FILE *fp)
   MSize m, n;
   for (m = LUAL_BUFFERSIZE, n = 0; ; m += m) {
     char *buf = lj_buf_tmp(L, m);
-    n += (MSize)fread(buf+n, 1, m-n, fp);
+    n += (MSize)l_fread(buf+n, 1, m-n, fp);
     if (n != m) {
       setstrV(L, L->top++, lj_str_new(L, buf, (size_t)n));
       lj_gc_check(L);
@@ -176,13 +176,13 @@ static int io_file_readlen(lua_State *L, FILE *fp, MSize m)
 {
   if (m) {
     char *buf = lj_buf_tmp(L, m);
-    MSize n = (MSize)fread(buf, 1, m, fp);
+    MSize n = (MSize)l_fread(buf, 1, m, fp);
     setstrV(L, L->top++, lj_str_new(L, buf, (size_t)n));
     lj_gc_check(L);
     return n > 0;
   } else {
-    int c = getc(fp);
-    ungetc(c, fp);
+    int c = l_fgetc(fp);
+    l_ungetc(c, fp);
     setstrV(L, L->top++, &G(L)->strempty);
     return (c != EOF);
   }
@@ -308,7 +308,7 @@ LJLIB_CF(io_method_write)		LJLIB_REC(io_write 0)
 
 LJLIB_CF(io_method_flush)		LJLIB_REC(io_flush 0)
 {
-  return luaL_fileresult(L, fflush(io_tofile(L)->fp) == 0, NULL);
+  return luaL_fileresult(L, l_fflush(io_tofile(L)->fp) == 0, NULL);
 }
 
 #if LJ_32 && defined(__ANDROID__) && __ANDROID_API__ < 24
@@ -339,6 +339,9 @@ LJLIB_CF(io_method_seek)
     else if (!tvisnil(o))
       lj_err_argt(L, 3, LUA_TNUMBER);
   }
+#ifdef LUAJIT_USE_IO_FUNCTIONS
+  res = (int) l_fseek(fp, (long) ofs, opt);
+#else
 #if LJ_TARGET_POSIX
   res = fseeko(fp, ofs, opt);
 #elif _MSC_VER >= 1400
@@ -348,16 +351,21 @@ LJLIB_CF(io_method_seek)
 #else
   res = fseek(fp, (long)ofs, opt);
 #endif
+#endif
   if (res)
     return luaL_fileresult(L, 0, NULL);
-#if LJ_TARGET_POSIX
-  ofs = ftello(fp);
-#elif _MSC_VER >= 1400
-  ofs = _ftelli64(fp);
-#elif defined(__MINGW32__)
-  ofs = ftello64(fp);
+#ifdef LUAJIT_USE_IO_FUNCTIONS
+  ofs = l_ftell(fp);
 #else
-  ofs = (int64_t)ftell(fp);
+    #if LJ_TARGET_POSIX
+      ofs = ftello(fp);
+    #elif _MSC_VER >= 1400
+      ofs = _ftelli64(fp);
+    #elif defined(__MINGW32__)
+      ofs = ftello64(fp);
+    #else
+      ofs = (int64_t)ftell(fp);
+    #endif
 #endif
   setint64V(L->top-1, ofs);
   return 1;
@@ -414,7 +422,7 @@ LJLIB_CF(io_open)
   GCstr *s = lj_lib_optstr(L, 2);
   const char *mode = s ? strdata(s) : "r";
   IOFileUD *iof = io_file_new(L);
-  iof->fp = fopen(fname, mode);
+  iof->fp = l_fopen(fname, mode);
   return iof->fp != NULL ? 1 : luaL_fileresult(L, 0, fname);
 }
 
@@ -466,7 +474,7 @@ LJLIB_CF(io_write)		LJLIB_REC(io_write GCROOT_IO_OUTPUT)
 
 LJLIB_CF(io_flush)		LJLIB_REC(io_flush GCROOT_IO_OUTPUT)
 {
-  return luaL_fileresult(L, fflush(io_stdfile(L, GCROOT_IO_OUTPUT)->fp) == 0, NULL);
+  return luaL_fileresult(L, l_fflush(io_stdfile(L, GCROOT_IO_OUTPUT)->fp) == 0, NULL);
 }
 
 static int io_std_getset(lua_State *L, ptrdiff_t id, const char *mode)
@@ -551,3 +559,24 @@ LUALIB_API int luaopen_io(lua_State *L)
   return 1;
 }
 
+
+#ifdef LUAJIT_USE_IO_FUNCTIONS
+
+LUALIB_API lua_io_functions lua_io_funcs;
+ 
+LUALIB_API void luaL_registerFileFunctions(lua_io_functions funcs)
+{
+    lua_io_funcs.fopen = funcs.fopen;
+    lua_io_funcs.fclose = funcs.fclose;
+    lua_io_funcs.fread = funcs.fread;
+    lua_io_funcs.fwrite = funcs.fwrite;
+    lua_io_funcs.feof = funcs.feof;
+    lua_io_funcs.ferror = funcs.ferror;
+    lua_io_funcs.ftell = funcs.ftell;
+    lua_io_funcs.fseek = funcs.fseek;
+}
+LUALIB_API lua_io_functions* luaL_getFileFunctions(void)
+{
+    return &lua_io_funcs;
+}
+#endif

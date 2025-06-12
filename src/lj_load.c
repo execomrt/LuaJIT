@@ -4,12 +4,12 @@
 */
 
 #include <errno.h>
-#include <stdio.h>
 
 #define lj_load_c
 #define LUA_CORE
 
 #include "lua.h"
+#include "lualib.h"
 #include "lauxlib.h"
 
 #include "lj_obj.h"
@@ -90,8 +90,8 @@ static const char *reader_file(lua_State *L, void *ud, size_t *size)
 {
   FileReaderCtx *ctx = (FileReaderCtx *)ud;
   UNUSED(L);
-  if (feof(ctx->fp)) return NULL;
-  *size = fread(ctx->buf, 1, sizeof(ctx->buf), ctx->fp);
+  if (l_feof(ctx->fp)) return NULL;
+  *size = l_fread(ctx->buf, 1, sizeof(ctx->buf), ctx->fp);
   return *size > 0 ? ctx->buf : NULL;
 }
 
@@ -104,7 +104,7 @@ LUALIB_API int luaL_loadfilex(lua_State *L, const char *filename,
   int err = 0;
   if (filename) {
     chunkname = lua_pushfstring(L, "@%s", filename);
-    ctx.fp = fopen(filename, "rb");
+    ctx.fp = l_fopen(filename, "rb");
     if (ctx.fp == NULL) {
       L->top--;
       lua_pushfstring(L, "cannot open %s: %s", filename, strerror(errno));
@@ -115,9 +115,9 @@ LUALIB_API int luaL_loadfilex(lua_State *L, const char *filename,
     chunkname = "=stdin";
   }
   status = lua_loadx(L, reader_file, &ctx, chunkname, mode);
-  if (ferror(ctx.fp)) err = errno;
+  if (l_ferror(ctx.fp)) err = errno;
   if (filename) {
-    fclose(ctx.fp);
+      l_fclose(ctx.fp);
     L->top--;
     copyTV(L, L->top-1, L->top);
   }
