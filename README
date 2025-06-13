@@ -1,16 +1,37 @@
-README for LuaJIT 2.1
----------------------
+LuaJIT 2.1 – CMake-Enhanced Branch
+LuaJIT is a Just-In-Time (JIT) compiler for the Lua programming language, known for its exceptional performance and small footprint.
 
-LuaJIT is a Just-In-Time (JIT) compiler for the Lua programming language.
+📘 Project Homepage: https://luajit.org/
 
-Project Homepage: https://luajit.org/
+📖 Documentation: Open doc/luajit.html in your browser for usage and technical reference.
 
-LuaJIT is Copyright (C) 2005-2025 Mike Pall.
+✨ Highlights of This Branch
+This custom branch of LuaJIT 2.1 introduces modern development enhancements and extensibility features:
+
+🔧 CMake Build System
+Build LuaJIT using CMakeLists.txt, fully configurable for different platforms and IDEs (e.g., Visual Studio, Ninja, Make).
+
+🧩 Pluggable File I/O Extensions
+Override default file operations (fopen, fread, fclose, etc.) by providing custom function implementations. This allows LuaJIT to be embedded in constrained or virtualized environments.
+
+📁 Sample Code Included
+Demonstrates how to hook into file I/O or integrate the LuaJIT core using CMake builds.
+
+📄 License
 LuaJIT is free software, released under the MIT license.
-See full Copyright Notice in the COPYRIGHT file or in luajit.h.
 
-Documentation for LuaJIT is available in HTML format.
-Please point your favorite browser to:
+Copyright © 2005–2025 Mike Pall
 
- doc/luajit.html
+See the COPYRIGHT file or refer to luajit.h for the full license terms.
+
+🛠 Getting Started
+To build with CMake:
+
+bash
+Copy
+Edit
+mkdir build && cd build
+cmake ..
+cmake --build .
+For file I/O extension samples, check the samples/ or extensions/ directory in this branch.
 
