@@ -688,7 +688,11 @@ LUALIB_API void luaL_traceback (lua_State *L, lua_State *L1, const char *msg,
     else
       lua_pushfstring(L, "\n\t%s:", ar.short_src);
     if (ar.currentline > 0)
+#ifdef LUA_USE_VC_LINE_NUMBERS
+      lua_pushfstring(L, "\n\t" LUA_STACK_BACK_FORMAT " in ", ar.short_src, ar.currentline);
+#else
       lua_pushfstring(L, "%d:", ar.currentline);
+#endif
     if (*ar.namewhat) {
       lua_pushfstring(L, " in function " LUA_QS, ar.name);
     } else {
