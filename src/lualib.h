@@ -105,7 +105,7 @@ static inline void l_ungetc(int c, FILE* fp)
 	l_fseek(fp, -1, SEEK_CUR);
 }
 
-static char* l_fgets(char* _Buffer, int _MaxCount, FILE* _Stream)
+static inline char* l_fgets(char* _Buffer, int _MaxCount, FILE* _Stream)
 {
 	// implement using lua_io_funcs.fread
 	size_t bytesRead = l_fread(_Buffer, 1, _MaxCount - 1, _Stream);
@@ -118,12 +118,6 @@ static char* l_fgets(char* _Buffer, int _MaxCount, FILE* _Stream)
 	}
 	return NULL; // EOF reached
 }
-
-LUALIB_API lua_mem_functions lua_mem_funcs;
-
-#define l_malloc lua_mem_funcs.malloc
-#define l_free lua_mem_funcs.free
-
 
 #endif // LUAJIT_USE_IO_FUNCTIONS
 
