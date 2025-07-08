@@ -579,4 +579,19 @@ LUALIB_API lua_io_functions* luaL_getFileFunctions(void)
 {
     return &lua_io_funcs;
 }
+
+LUALIB_API lua_mem_functions lua_mem_funcs;
+
+
+LUALIB_API void luaL_registerMemFunctions(lua_mem_functions funcs)
+{
+    lua_mem_funcs = funcs;
+}
+
+LUALIB_API lua_mem_functions* luaL_getMemFunctions(void)
+{
+    return &lua_mem_funcs;
+}
+
+
 #endif

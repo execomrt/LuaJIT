@@ -70,6 +70,12 @@ typedef struct lua_Print_functions {
 	void (*print)(const char* text);
 } lua_print_functions;
 
+LUALIB_API lua_mem_functions* luaL_getMemFunctions(void);
+
+#define l_malloc luaL_getMemFunctions()->malloc
+#define l_free luaL_getMemFunctions()->free
+
+
 LUALIB_API void luaL_registerPrintFunctions(lua_print_functions funcs);
 
 LUALIB_API lua_io_functions* luaL_getFileFunctions(void);

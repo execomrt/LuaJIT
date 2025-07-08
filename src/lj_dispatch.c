@@ -242,7 +242,7 @@ static void setptmode_all(global_State *g, GCproto *pt, int mode)
 #endif
 
 /* Public API function: control the JIT engine. */
-int luaJIT_setmode(lua_State *L, int idx, int mode)
+LUALIB_API int luaJIT_setmode(lua_State *L, int idx, int mode)
 {
   global_State *g = G(L);
   int mm = mode & LUAJIT_MODE_MASK;
